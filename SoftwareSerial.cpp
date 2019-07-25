@@ -30,22 +30,66 @@
  * http://arduiniana.org.
  */
 
+/*
+ * Platforms
+ * TARGET_LPC1768
+ * ARDUINO_ARCH_STM32F1 : libmaple STM32
+*/
+
 //
 // Includes
 //
 #include <stdint.h>
 #include <stdarg.h>
 #include <Arduino.h>
+#ifdef TARGET_LPC1768
 #include <pinmapping.h>
 #include <time.h>
-#include "SoftwareSerial.h"
 #include "lpc17xx_rit.h"
 #include "lpc17xx_clkpwr.h"
 #include "debug_frmwrk.h"
+#endif
+#ifdef ARDUINO_ARCH_STM32F1
+#include <HardwareTimer.h>
+#endif
+#include "SoftwareSerial.h"
 
 #define FORCE_BAUD_RATE 19200
 #define INTERRUPT_PRIORITY 0
 #define OVERSAMPLE 3
+
+#ifdef ARDUINO_ARCH_STM32F1
+  #define gpio_set(IO,V) (PIN_MAP[IO].gpio_device->regs->BSRR = (1U << PIN_MAP[IO].gpio_bit) << ((V) ? 0 : 16))
+  #define gpio_get(IO) (PIN_MAP[IO].gpio_device->regs->IDR & (1U << PIN_MAP[IO].gpio_bit) ? HIGH : LOW)
+  
+  #define cli() noInterrupts() // Disable interrupts  
+  #define sei() interrupts() // Enable interrupts
+
+  #ifdef STM32_HIGH_DENSITY
+  // define default timer
+  	#ifndef SS_TIMER
+  	#define SS_TIMER 8
+  	#endif
+  	#ifndef SS_TIMER_CHANNEL
+  	#define SS_TIMER_CHANNEL 4
+  	#endif
+
+    HardwareTimer ssTimer6(6), ssTimer7(7);
+    HardwareTimer *SSTimer[8] =  { &Timer1,&Timer2,&Timer3,&Timer4,&Timer5,&ssTimer6,&ssTimer7,&Timer8 };
+    #define ss_timer SSTimer[SS_TIMER-1]
+  #else
+  	// define default timer and channel
+  	#ifndef SS_TIMER
+  	#define SS_TIMER 4
+  	#endif
+  	#ifndef SS_TIMER_CHANNEL
+  	#define SS_TIMER_CHANNEL 4
+  	#endif
+
+    HardwareTimer *SSTimer[4] =  { &Timer1,&Timer2,&Timer3,&Timer4 };
+  	#define ss_timer SSTimer[SS_TIMER-1]
+  #endif
+#endif
 //
 // Statics
 //
@@ -64,25 +108,43 @@ uint32_t SoftwareSerial::cur_speed = 0;
 //
 // Private methods
 //
-
+//#define MAX_RELOAD ((1 << 16) - 1)
 void SoftwareSerial::setSpeed(uint32_t speed)
 {
-  if (speed != cur_speed) {
-    NVIC_DisableIRQ(RIT_IRQn);
-    if (speed != 0) {
-      uint32_t clock_rate, cmp_value;
-      // Get PCLK value of RIT
-      clock_rate = CLKPWR_GetPCLK(CLKPWR_PCLKSEL_RIT);
-      cmp_value = clock_rate/(speed*OVERSAMPLE);
-      LPC_RIT->RICOMPVAL = cmp_value;
-      LPC_RIT->RICOUNTER	= 0x00000000;
-      /* Set timer enable clear bit to clear timer to 0 whenever
-      * counter value equals the contents of RICOMPVAL
-      */
-      LPC_RIT->RICTRL |= (1<<1);
-      NVIC_EnableIRQ(RIT_IRQn);
-    }
-    cur_speed = speed;
+  if (speed != cur_speed) {    
+    #ifdef TARGET_LPC1768
+      NVIC_DisableIRQ(RIT_IRQn);
+      if (speed != 0) {
+        uint32_t clock_rate, cmp_value;
+        // Get PCLK value of RIT
+        clock_rate = CLKPWR_GetPCLK(CLKPWR_PCLKSEL_RIT);
+        cmp_value = clock_rate/(speed*OVERSAMPLE);
+        LPC_RIT->RICOMPVAL = cmp_value;
+        LPC_RIT->RICOUNTER	= 0x00000000;
+        /* Set timer enable clear bit to clear timer to 0 whenever
+        * counter value equals the contents of RICOMPVAL
+        */
+        LPC_RIT->RICTRL |= (1<<1);
+        NVIC_EnableIRQ(RIT_IRQn);
+      }
+      cur_speed = speed;
+    #endif
+    #ifdef ARDUINO_ARCH_STM32F1
+      ss_timer->pause();
+      ss_timer->setCount(0);
+      if (speed != 0) {
+        // TODO:it may need more accurate calculation.Especially when using higher baudrate.
+        ss_timer->setPeriod(1000000ul/(speed*OVERSAMPLE));
+        //uint32 period_cyc = microseconds * CYCLES_PER_MICROSECOND;
+        //uint16 prescaler = (uint16)(period_cyc / MAX_RELOAD + 1);
+        //uint16 overflow = (uint16)((period_cyc + (prescaler / 2)) / prescaler);
+        //ss_timer->setPrescaleFactor(prescaler);
+        //ss_timer->setOverflow(overflow);
+        ss_timer->refresh(); // Refresh the timer    
+        ss_timer->resume();  // Start the timer counting
+      }      
+      cur_speed = speed;
+    #endif
   }
 }
 
@@ -243,15 +305,17 @@ inline void SoftwareSerial::handle_interrupt() {
   if (active_out) active_out->send();
 }
 
-extern "C" void RIT_IRQHandler(void) {
-  LPC_RIT->RICTRL |= 1;
-  SoftwareSerial::handle_interrupt();
-}
+#ifdef TARGET_LPC1768
+  extern "C" void RIT_IRQHandler(void) {
+    LPC_RIT->RICTRL |= 1;
+    SoftwareSerial::handle_interrupt();
+  }
+#endif
 
 //
 // Constructor
 //
-SoftwareSerial::SoftwareSerial(pin_t receivePin, pin_t transmitPin, bool inverse_logic /* = false */) :
+SoftwareSerial::SoftwareSerial(int16_t receivePin, int16_t transmitPin, bool inverse_logic /* = false */) :
   _receivePin(receivePin),
   _transmitPin(transmitPin),
   _speed(0),
@@ -281,9 +345,15 @@ void SoftwareSerial::begin(long speed) {
   #endif
   _speed = speed;
   if (!initialised) {
-    RIT_Init(LPC_RIT);
-    NVIC_SetPriority(RIT_IRQn, NVIC_EncodePriority(0, INTERRUPT_PRIORITY, 0));
-    initialised = true;
+    #ifdef TARGET_LPC1768 
+      RIT_Init(LPC_RIT);
+      NVIC_SetPriority(RIT_IRQn, NVIC_EncodePriority(0, INTERRUPT_PRIORITY, 0));
+      initialised = true;
+    #endif
+    #ifdef ARDUINO_ARCH_STM32F1  
+      ss_timer->attachInterrupt(SS_TIMER_CHANNEL,handle_interrupt); // attach corresponding handler routine    
+      initialised = true;    
+    #endif
   }
   if (!_half_duplex) {
     setTX();
@@ -302,7 +372,7 @@ void SoftwareSerial::end() {
 
 
 // Read data from buffer
-int16_t SoftwareSerial::read() {
+int SoftwareSerial::read() {
   //printf("hd %d active_in %d tx %d rx %d\n", _half_duplex, active_in, _receivePin, _transmitPin);
 
   // Empty buffer?
@@ -314,7 +384,7 @@ int16_t SoftwareSerial::read() {
   return d;
 }
 
-size_t SoftwareSerial::available() {
+int SoftwareSerial::available() {
   return (_receive_buffer_tail + _SS_MAX_RX_BUFF - _receive_buffer_head) % _SS_MAX_RX_BUFF;
 }
 
@@ -341,7 +411,7 @@ void SoftwareSerial::flush() {
   sei();
 }
 
-int16_t SoftwareSerial::peek() {
+int SoftwareSerial::peek() {
   // Empty buffer?
   if (_receive_buffer_head == _receive_buffer_tail)
     return -1;

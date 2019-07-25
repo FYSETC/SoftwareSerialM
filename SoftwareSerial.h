@@ -48,8 +48,8 @@ class SoftwareSerial : public Stream
 {
 private:
   // per object data
-  pin_t _receivePin;
-  pin_t _transmitPin;
+  int16_t _receivePin;
+  int16_t _transmitPin;
   uint32_t _speed;
 
   uint16_t _buffer_overflow:1;
@@ -87,7 +87,7 @@ private:
 public:
   // public methods
 
-  SoftwareSerial(pin_t receivePin, pin_t transmitPin, bool inverse_logic = false);
+  SoftwareSerial(int16_t receivePin, int16_t transmitPin, bool inverse_logic = false);
   ~SoftwareSerial();
   void begin(long speed);
   bool listen();
@@ -95,11 +95,11 @@ public:
   bool isListening() { return active_listener == this; }
   bool stopListening();
   bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
-  int16_t peek();
+  int peek();
 
   virtual size_t write(uint8_t byte);
-  virtual int16_t read();
-  virtual size_t available();
+  virtual int read();
+  virtual int available();
   virtual void flush();
   operator bool() { return true; }
 
