@@ -68,7 +68,7 @@
   #ifdef STM32_HIGH_DENSITY
   // define default timer
   	#ifndef SS_TIMER
-  	#define SS_TIMER 8
+  	#define SS_TIMER 3
   	#endif
   	#ifndef SS_TIMER_CHANNEL
   	#define SS_TIMER_CHANNEL 4
@@ -80,7 +80,7 @@
   #else
   	// define default timer and channel
   	#ifndef SS_TIMER
-  	#define SS_TIMER 4
+  	#define SS_TIMER 3
   	#endif
   	#ifndef SS_TIMER_CHANNEL
   	#define SS_TIMER_CHANNEL 4
