@@ -51,7 +51,7 @@
   #endif
 
   #ifndef SS_TIMER
-    #define SS_TIMER 4
+    #define SS_TIMER 13
   #endif
 
 #endif
