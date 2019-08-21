@@ -25,7 +25,7 @@
 
 #if HAL_SS_PLATFORM == HAL_PLATFORM_STM32F1
 
-#include "HAL_softSerial_STM32F1.h"
+#include "HAL_softserial_STM32F1.h"
 
 #ifdef STM32_HIGH_DENSITY
 // define default timer
