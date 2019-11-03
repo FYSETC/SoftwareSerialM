@@ -267,12 +267,12 @@ void SoftwareSerial::begin(long speed) {
   _speed = speed;
   if (!initialised) {
     HAL_softSerial_init();
-
-    // Set output pin as input, to ensure GPIO clock is started before calling setTX().
-    pinMode(_transmitPin, _inverse_logic ? INPUT_PULLDOWN : INPUT_PULLUP);
-
     initialised = true;
   }
+
+  // Set output pin as input, to ensure GPIO clock is started before calling setTX().
+  pinMode(_transmitPin, _inverse_logic ? INPUT_PULLDOWN : INPUT_PULLUP);
+
   if (!_half_duplex) {
     setTX();
     setRX();
