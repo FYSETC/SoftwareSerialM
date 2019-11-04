@@ -276,11 +276,11 @@ void SoftwareSerial::begin(long speed) {
   if (!_half_duplex) {
     setTX();
     setRX();
+    listen();
   }
   else
     setTX();  
   
-  listen();
   //printf("hd %d active_in %d tx %d rx %d\n", _half_duplex, active_in, _receivePin, _transmitPin);
 }
 
