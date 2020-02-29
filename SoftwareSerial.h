@@ -36,7 +36,6 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <Stream.h>
-#include <Print.h>
 
 /******************************************************************************
 * Definitions
@@ -44,70 +43,66 @@
 
 #define _SS_MAX_RX_BUFF 64 // RX buffer size
 
-class SoftwareSerial : public Stream
-{
-private:
-  // per object data
-  int16_t _receivePin;
-  int16_t _transmitPin;
-  uint32_t _speed;
+class SoftwareSerial : public Stream {
+  private:
+    // per object data
+    int16_t _receivePin;
+    int16_t _transmitPin;
+    uint32_t _speed;
 
-  uint16_t _buffer_overflow:1;
-  uint16_t _inverse_logic:1;
-  uint16_t _half_duplex:1;
-  uint16_t _output_pending:1;
+    uint16_t _buffer_overflow:1;
+    uint16_t _inverse_logic:1;
+    uint16_t _half_duplex:1;
+    uint16_t _output_pending:1;
 
-  unsigned char _receive_buffer[_SS_MAX_RX_BUFF];
-  volatile uint8_t _receive_buffer_tail;
-  volatile uint8_t _receive_buffer_head;
+    unsigned char _receive_buffer[_SS_MAX_RX_BUFF];
+    volatile uint8_t _receive_buffer_tail;
+    volatile uint8_t _receive_buffer_head;
 
-  uint32_t delta_start;
+    uint32_t delta_start;
 
-  // static data
-  static bool initialised;
-  static SoftwareSerial * active_listener;
-  static SoftwareSerial * volatile active_out;
-  static SoftwareSerial * volatile active_in;
-  static int32_t tx_tick_cnt;
-  static int32_t rx_tick_cnt;
-  static uint32_t tx_buffer;
-  static int32_t tx_bit_cnt;
-  static uint32_t rx_buffer;
-  static int32_t rx_bit_cnt;
-  static uint32_t cur_speed;
+    // static data
+    static bool initialised;
+    static SoftwareSerial * active_listener;
+    static SoftwareSerial * volatile active_out;
+    static SoftwareSerial * volatile active_in;
+    static int32_t tx_tick_cnt;
+    static int32_t rx_tick_cnt;
+    static uint32_t tx_buffer;
+    static int32_t tx_bit_cnt;
+    static uint32_t rx_buffer;
+    static int32_t rx_bit_cnt;
+    static uint32_t cur_speed;
 
-  // private methods
-  void send();
-  void recv();
-  void setTX();
-  void setRX();
-  void setSpeed(uint32_t speed);
-  void setRXTX(bool input);
+    // private methods
+    void send();
+    void recv();
+    void setTX();
+    void setRX();
+    void setSpeed(uint32_t speed);
+    void setRXTX(bool input);
 
-public:
-  // public methods
+  public:
+    // public methods
 
-  SoftwareSerial(int16_t receivePin, int16_t transmitPin, bool inverse_logic = false);
-  ~SoftwareSerial();
-  void begin(long speed);
-  bool listen();
-  void end();
-  bool isListening() { return active_listener == this; }
-  bool stopListening();
-  bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
-  int peek();
+    SoftwareSerial(int16_t receivePin, int16_t transmitPin, bool inverse_logic = false);
+    ~SoftwareSerial();
+    void begin(long speed);
+    bool listen();
+    void end();
+    bool isListening() { return active_listener == this; }
+    bool stopListening();
+    bool overflow() { bool ret = _buffer_overflow; if (ret) _buffer_overflow = false; return ret; }
+    int peek();
 
-  virtual size_t write(uint8_t byte);
-  virtual int read();
-  virtual int available();
-  virtual void flush();
-  operator bool() { return true; }
+    virtual size_t write(uint8_t byte);
+    virtual int read();
+    virtual int available();
+    virtual void flush();
+    operator bool() { return true; }
 
-  using Print::write;
-  //using HalSerial::write;
-
-  // public only for easy access by interrupt handlers
-  [[gnu::always_inline]] static inline void handle_interrupt();
+    // public only for easy access by interrupt handlers
+    [[gnu::always_inline]] static inline void handle_interrupt();
 };
 
 // Arduino 0012 workaround
