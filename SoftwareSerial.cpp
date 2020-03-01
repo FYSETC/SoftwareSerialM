@@ -102,7 +102,6 @@ bool SoftwareSerial::stopListening() {
   return true;
 }
 
-
 inline void SoftwareSerial::setTX() {
   // First write, then set output. If we do this the other way around,
   // the pin would be output low for a short while before switching to
@@ -137,7 +136,6 @@ inline void SoftwareSerial::setRXTX(bool input) {
     }
   }
 }
-
 
 inline void SoftwareSerial::send() {
   if (--tx_tick_cnt > 0) return;
@@ -275,7 +273,6 @@ void SoftwareSerial::begin(long speed) {
 void SoftwareSerial::end() {
   stopListening();
 }
-
 
 // Read data from buffer
 int SoftwareSerial::read() {

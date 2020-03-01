@@ -11,6 +11,7 @@
  * -- Pin change interrupt macros by Paul Stoffregen (http://www.pjrc.com)
  * -- 20MHz processor support by Garrett Mace (http://www.macetech.com)
  * -- ATmega1280/2560 support by Brett Hagman (http://www.roguerobotics.com/)
+ * -- SAMD51 support by Giuliano Zaro
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
