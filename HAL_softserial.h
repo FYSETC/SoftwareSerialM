@@ -26,6 +26,8 @@
   #include "HAL_softserial_STM32F1.h"
 #elif HAL_SS_PLATFORM == HAL_PLATFORM_STM32
   #include "HAL_softserial_STM32.h"
+#elif HAL_SS_PLATFORM == HAL_PLATFORM_SAMD51
+  #include "HAL_softserial_SAMD51.h"
 #else
   #error "Unsupported Platform!"
 #endif
